@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+{% block content %}
+      <section id="home" class="hero">
+        <div class="hero-inner">
+          <p class="eyebrow">Smart Road Safety Platform</p>
+          <h1>Making Roads Safer, One Report at a Time</h1>
+          <p class="hero-copy">
+            RoadSense lets you report road hazards on an interactive map.
+            Click a spot, describe the problem, and the report is stored on
+            this computer. The map only shows reports that people have
+            actually submitted here.
+          </p>
+          <div class="hero-actions">
+            {% if current_user %}
+              <a class="btn btn-primary" href="#report">Report a Hazard</a>
+            {% else %}
+              <a class="btn btn-primary" href="{{ url_for('login') }}">Log in to Report</a>
+            {% endif %}
+            <a class="btn btn-secondary" href="#explore">Explore the map</a>
+          </div>
+        </div>
+      </section>
+
+      <section id="explore" class="map-preview" aria-labelledby="map-heading">
+        <div class="section-head">
+          <h2 id="map-heading">Explore hazards</h2>
+          <p>
+            Search for a city, road, or landmark to navigate the map.
+            {% if current_user %}Click or drag the marker to pinpoint a hazard location.{% else %}Click a marker to read its details.{% endif %}
+          </p>
+        </div>
+        <div class="map-shell">
+          <div class="map-search-row">
+            <div class="map-search-wrap" role="search" aria-label="Location search">
+              <label for="location-search" class="sr-only">Search for a location</label>
+              <input
+                id="location-search"
+                class="map-search-input"
+                type="search"
+                autocomplete="off"
+                spellcheck="false"
+                placeholder="Search city, road, or landmark…"
+                aria-autocomplete="list"
+                aria-controls="search-suggestions"
+                aria-expanded="false"
+              />
+              <ul
+                id="search-suggestions"
+                class="search-suggestions"
+                role="listbox"
+                aria-label="Search suggestions"
+                hidden
+              ></ul>
+            </div>
+            <button
+              id="geolocate-btn"
+              class="btn-geolocate"
+              type="button"
+              title="Use my current location"
+              aria-label="Use my current location"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="9" opacity=".3"/></svg>
+              <span>My location</span>
+            </button>
+          </div>
+          <p id="search-status" class="search-status" role="status" aria-live="polite"></p>
+          <p id="map-status" class="map-status" role="status">
+            Loading reports…
+          </p>
+          <div id="hazard-map" class="map-card" aria-label="Interactive road map"></div>
+          <p class="map-hint">
+            {% if current_user %}
+              <strong>To report:</strong> search or click the map to place a pin, then drag to refine. Scroll down to complete the form.
+            {% else %}
+              <a href="{{ url_for('login') }}">Log in</a> to report a hazard. The map shows all submitted reports.
+            {% endif %}
+          </p>
+        </div>
+      </section>
+
+      <section class="features">
+        <div class="section-head">
+          <h2>How it works</h2>
+          <p>Three simple steps. Log in to submit your own report.</p>
+        </div>
+        <div class="feature-grid">
+          <article class="feature-card">
+            <div class="feature-icon" aria-hidden="true">⚑</div>
+            <h3>Report a hazard</h3>
+            <p>
+              Choose a type, write a short description, and click the map to
+              set the location. You can attach an optional road photo.
+            </p>
+          </article>
+          <article class="feature-card">
+            <div class="feature-icon" aria-hidden="true">▣</div>
+            <h3>See nearby risks</h3>
+            <p>
+              Saved reports show up as map markers. Click a marker to view
+              the hazard type, description, and status.
+            </p>
+          </article>
+          <article class="feature-card">
+            <div class="feature-icon" aria-hidden="true">◎</div>
+            <h3>Track your reports</h3>
+            <p>
+              Sign in to report hazards and find your submissions on the
+              My Reports page. Administrators review and update statuses.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section id="about" class="about">
+        <div class="about-card">
+          <h2>About RoadSense</h2>
+          <p>
+            RoadSense is a student project for sharing road safety problems.
+            Phase 3 adds user accounts, report ownership, and an admin
+            dashboard for reviewing reports.
+          </p>
+          <p>
+            If you see a hazard on the road today, follow local safety
+            guidance and contact the appropriate authorities as well.
+          </p>
+        </div>
+      </section>
+
+      <section id="report" class="report-section">
+        <div class="section-head">
+          <h2>Report a Hazard</h2>
+          {% if current_user %}
+            <p>
+              Click the map above to choose a location, then complete this form.
+              All fields except the photo are required.
+            </p>
+          {% else %}
+            <p>
+              You must <a href="{{ url_for('login') }}">log in</a> to report a hazard.
+            </p>
+          {% endif %}
+        </div>
+        {% if current_user %}
+        <form id="report-form" class="report-form" novalidate>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+          <label>
+            Hazard type
+            <select id="hazard-type" name="hazard_type" required>
+              <option value="">Select a type</option>
+              <option value="Pothole">Pothole</option>
+              <option value="Damaged Road">Damaged Road</option>
+              <option value="Waterlogging">Waterlogging</option>
+              <option value="Other">Other</option>
+            </select>
+          </label>
+
+          <label>
+            Description
+            <textarea
+              id="description"
+              name="description"
+              rows="4"
+              minlength="10"
+              maxlength="1000"
+              required
+              placeholder="What should other people watch out for?"
+            ></textarea>
+          </label>
+
+          <div class="coord-row">
+            <label>
+              Latitude
+              <input
+                id="latitude"
+                name="latitude"
+                type="text"
+                readonly
+                required
+                placeholder="Click or search the map"
+              />
+            </label>
+            <label>
+              Longitude
+              <input
+                id="longitude"
+                name="longitude"
+                type="text"
+                readonly
+                required
+                placeholder="Click or search the map"
+              />
+            </label>
+          </div>
+          <p id="coord-hint" class="field-hint coord-hint">
+            Search or click the map above to place the hazard pin. You can drag the pin to refine the exact spot.
+          </p>
+
+          <label>
+            Road photograph (optional)
+            <input
+              id="photo"
+              name="photo"
+              type="file"
+              accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+            />
+          </label>
+          <p class="field-hint">JPG, PNG, or WEBP. Maximum 5 MB.</p>
+
+          <p id="form-message" class="form-message" role="status"></p>
+
+          <button class="btn btn-primary" type="submit">Submit report</button>
+        </form>
+        {% endif %}
+      </section>
+{% endblock %}
+{% block scripts %}
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+{% endblock %}

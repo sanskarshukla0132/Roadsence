@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}RoadSense — Smart Road Safety Platform{% endblock %}</title>
+    <meta name="csrf-token" content="{{ csrf_token }}" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}"
+    />
+  </head>
+  <body>
+    <header class="site-header">
+      <nav class="nav" aria-label="Main">
+        <a class="logo" href="{{ url_for('home') }}">
+          <span class="logo-mark" aria-hidden="true">
+            <svg viewBox="0 0 40 40" width="32" height="32">
+              <rect width="40" height="40" rx="10" fill="#1B365D" />
+              <path
+                d="M8 26h24M12 14h16"
+                stroke="#F26A21"
+                stroke-width="3"
+                stroke-linecap="round"
+              />
+              <path
+                d="M20 10v20"
+                stroke="#FFFFFF"
+                stroke-width="2.5"
+                stroke-dasharray="4 4"
+              />
+            </svg>
+          </span>
+          <span class="logo-text">RoadSense</span>
+        </a>
+
+        <button
+          class="nav-toggle"
+          type="button"
+          aria-label="Open menu"
+          aria-expanded="false"
+          aria-controls="nav-links"
+        >
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+
+        <ul id="nav-links" class="nav-links">
+          <li><a href="{{ url_for('home') }}">Home</a></li>
+          <li><a href="{{ url_for('home') }}#explore">Explore Hazards</a></li>
+          {% if current_user %}
+            <li><a href="{{ url_for('my_reports') }}">My Reports</a></li>
+            {% if current_user.is_admin %}
+              <li><a href="{{ url_for('admin_dashboard') }}">Admin</a></li>
+            {% endif %}
+            <li class="nav-user">
+              <span>{{ current_user.username }}</span>
+              <form method="post" action="{{ url_for('logout') }}" class="nav-logout-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+                <button type="submit" class="nav-logout">Log out</button>
+              </form>
+            </li>
+          {% else %}
+            <li><a href="{{ url_for('login') }}">Log in</a></li>
+            <li><a href="{{ url_for('register') }}">Register</a></li>
+          {% endif %}
+        </ul>
+      </nav>
+    </header>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <div class="flash-messages" role="alert">
+          {% for message in messages %}
+            <p class="flash-message">{{ message }}</p>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <main>
+      {% block content %}{% endblock %}
+    </main>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <p class="footer-brand">RoadSense</p>
+        <p>Smart Road Safety Platform · Phase 3: accounts and admin</p>
+        <p>&copy; 2026 RoadSense. Built as a learning project.</p>
+      </div>
+    </footer>
+
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+    {% block scripts %}{% endblock %}
+  </body>
+</html>

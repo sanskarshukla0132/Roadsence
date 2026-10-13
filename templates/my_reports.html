@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}My Reports — RoadSense{% endblock %}
+{% block content %}
+<section class="my-reports-section">
+  <div class="section-head">
+    <h1>My Reports</h1>
+    <p>Hazards you have reported. Only you can see this list.</p>
+  </div>
+  <div class="report-list">
+    {% if reports %}
+      {% for report in reports %}
+        <article class="report-item">
+          <div class="report-item-head">
+            <span class="report-type">{{ report.hazard_type }}</span>
+            <span class="report-status status-{{ report.status|lower|replace(' ', '-') }}">{{ report.status }}</span>
+          </div>
+          <p class="report-description">{{ report.description }}</p>
+          <p class="report-meta">
+            {{ report.latitude }}, {{ report.longitude }} · {{ report.created_at }}
+          </p>
+          {% if report.photo_filename %}
+            <img class="report-photo" src="{{ url_for('uploaded_file', filename=report.photo_filename) }}" alt="Hazard photo" />
+          {% endif %}
+        </article>
+      {% endfor %}
+    {% else %}
+      <p class="empty-state">You have not reported any hazards yet.</p>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}
