@@ -2,7 +2,8 @@
 {% block title %}Register — RoadSense{% endblock %}
 {% block content %}
 <section class="auth-section">
-  <div class="auth-card">
+  <div class="auth-road" aria-hidden="true"><span></span></div>
+  <div class="auth-card" data-reveal>
     <h1>Create your account</h1>
     <p>An account lets you report hazards and track your submissions.</p>
     <form method="post" action="{{ url_for('register') }}" class="auth-form" novalidate>
@@ -28,6 +29,7 @@
           autocomplete="new-password"
         />
       </label>
+      <p class="field-hint">At least 8 characters.</p>
       <button class="btn btn-primary" type="submit">Create account</button>
     </form>
     <p class="auth-alt">Already have an account? <a href="{{ url_for('login') }}">Log in</a></p>

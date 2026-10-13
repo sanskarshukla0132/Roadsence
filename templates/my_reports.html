@@ -2,29 +2,56 @@
 {% block title %}My Reports — RoadSense{% endblock %}
 {% block content %}
 <section class="my-reports-section">
-  <div class="section-head">
-    <h1>My Reports</h1>
-    <p>Hazards you have reported. Only you can see this list.</p>
+  <div class="section-head dash-head" data-reveal>
+    <div>
+      <p class="section-kicker">Your activity</p>
+      <h1>My Reports</h1>
+      <p>Hazards you have reported. Only you can see this list.</p>
+    </div>
+    <a class="btn btn-primary" href="{{ url_for('home') }}#report">New report</a>
   </div>
+
+  {% if reports %}
+    <ul class="stat-grid stat-grid-3" aria-label="Your report summary">
+      <li class="stat-card" data-reveal>
+        <span class="stat-label">Submitted</span>
+        <span class="stat-value">{{ reports|length }}</span>
+      </li>
+      <li class="stat-card" data-reveal>
+        <span class="stat-label">In Progress</span>
+        <span class="stat-value">{{ reports|selectattr('status', 'equalto', 'In Progress')|list|length }}</span>
+      </li>
+      <li class="stat-card" data-reveal>
+        <span class="stat-label">Resolved</span>
+        <span class="stat-value">{{ reports|selectattr('status', 'equalto', 'Resolved')|list|length }}</span>
+      </li>
+    </ul>
+  {% endif %}
+
   <div class="report-list">
     {% if reports %}
       {% for report in reports %}
-        <article class="report-item">
-          <div class="report-item-head">
-            <span class="report-type">{{ report.hazard_type }}</span>
-            <span class="report-status status-{{ report.status|lower|replace(' ', '-') }}">{{ report.status }}</span>
-          </div>
-          <p class="report-description">{{ report.description }}</p>
-          <p class="report-meta">
-            {{ report.latitude }}, {{ report.longitude }} · {{ report.created_at }}
-          </p>
+        <article class="report-item" data-reveal>
           {% if report.photo_filename %}
-            <img class="report-photo" src="{{ url_for('uploaded_file', filename=report.photo_filename) }}" alt="Hazard photo" />
+            <img class="report-photo" src="{{ url_for('uploaded_file', filename=report.photo_filename) }}" alt="Hazard photo" loading="lazy" />
           {% endif %}
+          <div class="report-item-body">
+            <div class="report-item-head">
+              <span class="report-type">{{ report.hazard_type }}</span>
+              <span class="report-status status-{{ report.status|lower|replace(' ', '-') }}">{{ report.status }}</span>
+            </div>
+            <p class="report-description">{{ report.description }}</p>
+            <p class="report-meta">
+              {{ report.latitude }}, {{ report.longitude }} · {{ report.created_at }}
+            </p>
+          </div>
         </article>
       {% endfor %}
     {% else %}
-      <p class="empty-state">You have not reported any hazards yet.</p>
+      <div class="empty-state" data-reveal>
+        <p>You have not reported any hazards yet.</p>
+        <a class="btn btn-secondary" href="{{ url_for('home') }}#report">Report your first hazard</a>
+      </div>
     {% endif %}
   </div>
 </section>
