@@ -2,39 +2,57 @@
 {% block title %}Admin Dashboard — RoadSense{% endblock %}
 {% block content %}
 <section class="admin-section">
-  <div class="section-head">
-    <h1>Admin Dashboard</h1>
-    <p>Review all submitted hazard reports and update their statuses.</p>
+  <div class="section-head dash-head" data-reveal>
+    <div>
+      <p class="section-kicker">Control center</p>
+      <h1>Admin Dashboard</h1>
+      <p>Review all submitted hazard reports and update their statuses.</p>
+    </div>
   </div>
-  <div class="admin-table-wrap">
+
+  <ul class="stat-grid" aria-label="Report summary">
+    <li class="stat-card" data-reveal>
+      <span class="stat-label">Total</span>
+      <span class="stat-value">{{ reports|length }}</span>
+    </li>
+    {% for status in allowed_statuses %}
+      <li class="stat-card" data-reveal>
+        <span class="stat-label">{{ status }}</span>
+        <span class="stat-value">{{ reports|selectattr('status', 'equalto', status)|list|length }}</span>
+      </li>
+    {% endfor %}
+  </ul>
+
+  <div class="admin-table-wrap" data-reveal>
     {% if reports %}
       <table class="admin-table">
         <thead>
           <tr>
-            <th>ID</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Location</th>
-            <th>Reporter</th>
-            <th>Status</th>
-            <th>Action</th>
+            <th scope="col">ID</th>
+            <th scope="col">Type</th>
+            <th scope="col">Description</th>
+            <th scope="col">Location</th>
+            <th scope="col">Reporter</th>
+            <th scope="col">Status</th>
+            <th scope="col">Action</th>
           </tr>
         </thead>
         <tbody>
           {% for report in reports %}
             <tr>
-              <td>{{ report.id }}</td>
-              <td>{{ report.hazard_type }}</td>
-              <td>{{ report.description }}</td>
-              <td>{{ report.latitude }}, {{ report.longitude }}</td>
-              <td>{{ report.reporter_username or '—' }}</td>
-              <td>
+              <td data-label="ID" class="cell-mono">#{{ report.id }}</td>
+              <td data-label="Type" class="cell-strong">{{ report.hazard_type }}</td>
+              <td data-label="Description" class="cell-desc">{{ report.description }}</td>
+              <td data-label="Location" class="cell-mono">{{ report.latitude }}, {{ report.longitude }}</td>
+              <td data-label="Reporter">{{ report.reporter_username or '—' }}</td>
+              <td data-label="Status">
                 <span class="report-status status-{{ report.status|lower|replace(' ', '-') }}">{{ report.status }}</span>
               </td>
-              <td>
+              <td data-label="Action">
                 <form method="post" action="{{ url_for('admin_update_status', report_id=report.id) }}" class="status-form">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
-                  <select name="status">
+                  <label class="sr-only" for="status-{{ report.id }}">Status for report {{ report.id }}</label>
+                  <select id="status-{{ report.id }}" name="status">
                     {% for status in allowed_statuses %}
                       <option value="{{ status }}" {% if status == report.status %}selected{% endif %}>{{ status }}</option>
                     {% endfor %}
@@ -47,7 +65,9 @@
         </tbody>
       </table>
     {% else %}
-      <p class="empty-state">No reports to review.</p>
+      <div class="empty-state">
+        <p>No reports to review.</p>
+      </div>
     {% endif %}
   </div>
 </section>

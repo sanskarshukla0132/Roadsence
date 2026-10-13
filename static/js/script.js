@@ -15,8 +15,6 @@ const SEARCH_MIN_CHARS    = 2;
 /* ------------------------------------------------------------------ */
 /* DOM references                                                       */
 /* ------------------------------------------------------------------ */
-const navToggle      = document.querySelector(".nav-toggle");
-const navLinks       = document.querySelector(".nav-links");
 const toast          = document.getElementById("toast");
 const mapStatus      = document.getElementById("map-status");
 const searchInput    = document.getElementById("location-search");
@@ -37,25 +35,42 @@ let reportsLayer;
 let selectedMarker;       // Draggable pin the user places
 let lastSearchTime = 0;   // Timestamp of last Nominatim request
 
+/* Navigation, header state, and reveal animations live in ui.js. */
+
 /* ------------------------------------------------------------------ */
-/* Nav menu                                                             */
+/* Live statistics in the hero                                          */
 /* ------------------------------------------------------------------ */
-function closeMenu() {
-  if (!navLinks || !navToggle) return;
-  navLinks.classList.remove("open");
-  navToggle.setAttribute("aria-expanded", "false");
-  navToggle.setAttribute("aria-label", "Open menu");
+const MARKER_STYLES = {
+  "Reported":    { radius: 8, color: "#0a0a0a", weight: 2, fillColor: "#fafafa", fillOpacity: 1 },
+  "In Progress": { radius: 8, color: "#fafafa", weight: 2, fillColor: "#737373", fillOpacity: 1 },
+  "Resolved":    { radius: 7, color: "#fafafa", weight: 2, fillColor: "#0a0a0a", fillOpacity: 0.6 },
+  "Dismissed":   { radius: 6, color: "#525252", weight: 1.5, fillColor: "#262626", fillOpacity: 0.8 },
+};
+
+function animateCount(el, target) {
+  if (!el) return;
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reduce || target === 0) {
+    el.textContent = String(target);
+    return;
+  }
+  const duration = 900;
+  const start = performance.now();
+  const step = (now) => {
+    const progress = Math.min((now - start) / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    el.textContent = String(Math.round(target * eased));
+    if (progress < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
 }
 
-if (navToggle && navLinks) {
-  navToggle.addEventListener("click", () => {
-    const isOpen = navLinks.classList.toggle("open");
-    navToggle.setAttribute("aria-expanded", String(isOpen));
-    navToggle.setAttribute("aria-label", isOpen ? "Close menu" : "Open menu");
-  });
-  navLinks.querySelectorAll("a").forEach((link) => {
-    link.addEventListener("click", closeMenu);
-  });
+function updateStats(reports) {
+  const open = reports.filter((r) => r.status === "Reported" || r.status === "In Progress").length;
+  const resolved = reports.filter((r) => r.status === "Resolved").length;
+  animateCount(document.getElementById("stat-total"), reports.length);
+  animateCount(document.getElementById("stat-open"), open);
+  animateCount(document.getElementById("stat-resolved"), resolved);
 }
 
 /* ------------------------------------------------------------------ */
@@ -142,7 +157,7 @@ function placeSelectionMarker(latlng) {
       zIndexOffset: 1000,
       icon: L.divIcon({
         className: "selection-marker-icon",
-        html: `<div class="sel-pin"></div>`,
+        html: `<span class="sel-pulse"></span><div class="sel-pin"></div>`,
         iconSize:   [24, 36],
         iconAnchor: [12, 36],
         popupAnchor:[0, -36],
@@ -441,16 +456,20 @@ function popupHtml(report) {
   const description = escapeHtml(report.description);
   const hazardType  = escapeHtml(report.hazard_type);
   const status      = escapeHtml(report.status);
+  const statusClass = escapeHtml(String(report.status).toLowerCase().replaceAll(" ", "-"));
   let html = `
-    <strong>${hazardType}</strong>
-    <p>${description}</p>
-    <p>Status: ${status}</p>
+    <div class="popup">
+      <div class="popup-head">
+        <strong>${hazardType}</strong>
+        <span class="report-status status-${statusClass}">${status}</span>
+      </div>
+      <p>${description}</p>
   `;
   if (report.photo_url) {
     const photoUrl = escapeHtml(report.photo_url);
-    html += `<p><img src="${photoUrl}" alt="Hazard photograph" style="max-width:100%;max-height:160px;border-radius:6px;display:block;margin-top:6px;object-fit:cover;" /></p>`;
+    html += `<img class="popup-photo" src="${photoUrl}" alt="Hazard photograph" />`;
   }
-  return html;
+  return html + "</div>";
 }
 
 /* ------------------------------------------------------------------ */
@@ -467,6 +486,7 @@ async function loadReports() {
     if (!response.ok) throw new Error("Could not load reports.");
     const data    = await response.json();
     const reports = data.reports || [];
+    updateStats(reports);
 
     let validCount = 0;
     reports.forEach((report) => {
@@ -477,13 +497,10 @@ async function loadReports() {
         lat < -90 || lat > 90 || lng < -180 || lng > 180
       ) return;
 
-      const marker = L.circleMarker([lat, lng], {
-        radius:      8,
-        color:       "#12243f",
-        weight:      2,
-        fillColor:   "#f26a21",
-        fillOpacity: 0.9,
-      });
+      const marker = L.circleMarker(
+        [lat, lng],
+        MARKER_STYLES[report.status] || MARKER_STYLES.Reported
+      );
       marker.bindPopup(popupHtml(report));
       reportsLayer.addLayer(marker);
       validCount++;
