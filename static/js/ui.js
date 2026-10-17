@@ -78,4 +78,59 @@
       scene.style.setProperty("--tilt-y", "0deg");
     });
   }
+
+  /* Theme Switcher */
+  const themeToggle = document.getElementById("theme-toggle");
+
+  function getStoredTheme() {
+    try {
+      const stored = localStorage.getItem("roadsense-theme");
+      if (stored === "light" || stored === "dark") return stored;
+    } catch (_e) {}
+    return "dark"; // Default to dark monochrome
+  }
+
+  function applyTheme(theme) {
+    document.documentElement.setAttribute("data-theme", theme);
+    document.documentElement.classList.toggle("theme-light", theme === "light");
+    document.documentElement.classList.toggle("theme-dark", theme === "dark");
+
+    const metaTheme = document.querySelector('meta[name="theme-color"]');
+    if (metaTheme) {
+      metaTheme.setAttribute("content", theme === "light" ? "#f8fafc" : "#0a0a0a");
+    }
+    const metaScheme = document.querySelector('meta[name="color-scheme"]');
+    if (metaScheme) {
+      metaScheme.setAttribute("content", theme === "light" ? "light dark" : "dark");
+    }
+
+    if (themeToggle) {
+      const isLight = theme === "light";
+      themeToggle.setAttribute(
+        "aria-label",
+        isLight ? "Switch to dark theme" : "Switch to light theme"
+      );
+      themeToggle.setAttribute(
+        "title",
+        isLight ? "Switch to dark theme" : "Switch to light theme"
+      );
+    }
+
+    try {
+      localStorage.setItem("roadsense-theme", theme);
+    } catch (_e) {}
+
+    window.dispatchEvent(new CustomEvent("themechange", { detail: { theme } }));
+  }
+
+  if (themeToggle) {
+    themeToggle.addEventListener("click", () => {
+      const current = document.documentElement.getAttribute("data-theme") || "dark";
+      const next = current === "light" ? "dark" : "light";
+      applyTheme(next);
+    });
+  }
+
+  // Ensure current theme matches stored preference
+  applyTheme(getStoredTheme());
 })();

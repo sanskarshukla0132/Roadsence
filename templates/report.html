@@ -1,0 +1,444 @@
+{% extends "base.html" %}
+
+{% block title %}Report a Road Hazard — RoadSense{% endblock %}
+
+{% block content %}
+<div class="report-page-wrapper">
+  <!-- Ambient background glow elements -->
+  <div class="report-ambient-bg" aria-hidden="true">
+    <div class="glow-orb orb-amber"></div>
+    <div class="glow-orb orb-blue"></div>
+  </div>
+
+  <div class="report-container">
+    <!-- Breadcrumb & Top Bar -->
+    <nav class="report-breadcrumb" aria-label="Breadcrumb">
+      <a href="{{ url_for('home') }}" class="breadcrumb-link">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <span>Live Map</span>
+      </a>
+      <span class="breadcrumb-sep">/</span>
+      <span class="breadcrumb-current">Report Hazard</span>
+    </nav>
+
+    <!-- Page Header -->
+    <header class="report-header" data-reveal>
+      <div class="eyebrow">
+        <span class="eyebrow-dot" aria-hidden="true"></span>
+        <span>Verified Civic Reporting</span>
+      </div>
+      <h1 class="report-title">Report a Road Hazard</h1>
+      <p class="report-subtitle">
+        Help protect drivers, bikers, and pedestrians. Submissions appear immediately on the interactive civic map and alert regional authorities for road repair.
+      </p>
+
+      <!-- Stepper / Progress Bar -->
+      <div class="stepper-shell" role="region" aria-label="Submission Progress">
+        <div class="stepper-track">
+          <div id="progress-fill" class="progress-fill" style="width: 25%;"></div>
+        </div>
+        <div class="stepper-steps">
+          <div class="step-item is-active" id="step-node-1" data-step="1">
+            <span class="step-num">1</span>
+            <span class="step-label">Hazard Category</span>
+          </div>
+          <div class="step-item" id="step-node-2" data-step="2">
+            <span class="step-num">2</span>
+            <span class="step-label">Details &amp; Photo</span>
+          </div>
+          <div class="step-item" id="step-node-3" data-step="3">
+            <span class="step-num">3</span>
+            <span class="step-label">Pinpoint Location</span>
+          </div>
+          <div class="step-item" id="step-node-4" data-step="4">
+            <span class="step-num">4</span>
+            <span class="step-label">Submit</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Card Body -->
+    <div class="report-main-card" data-reveal>
+      <!-- Success View (hidden until successful POST) -->
+      <div id="report-success-view" class="report-success-panel is-hidden" role="alert" aria-live="polite">
+        <div class="success-icon-wrap" aria-hidden="true">
+          <svg class="success-checkmark" viewBox="0 0 52 52">
+            <circle class="checkmark-circle" cx="26" cy="26" r="24" fill="none" />
+            <path class="checkmark-check" fill="none" d="M14 27l8 8 16-16" />
+          </svg>
+        </div>
+        <h2 class="success-title">Hazard Report Submitted!</h2>
+        <p class="success-desc" id="success-message-text">
+          Thank you! Your report has been verified and placed on the live interactive road map. Other commuters will now be alerted when approaching this spot.
+        </p>
+
+        <div class="success-summary-box" id="success-summary-box">
+          <div class="summary-line">
+            <span class="summary-key">Hazard Type:</span>
+            <span class="summary-val" id="success-val-type">—</span>
+          </div>
+          <div class="summary-line">
+            <span class="summary-key">Coordinates:</span>
+            <span class="summary-val" id="success-val-coords">—</span>
+          </div>
+          <div class="summary-line">
+            <span class="summary-key">Status:</span>
+            <span class="summary-val status-badge-pill">Reported · Open for Review</span>
+          </div>
+        </div>
+
+        <div class="success-actions">
+          <a href="{{ url_for('home') }}" class="btn btn-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+            <span>View on Live Map</span>
+          </a>
+          <button type="button" id="btn-report-another" class="btn btn-secondary">
+            <span>Report Another Hazard</span>
+          </button>
+          <a href="{{ url_for('my_reports') }}" class="btn btn-ghost">
+            <span>My Submissions →</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Submission Form -->
+      <form id="report-form" class="report-form-v2" novalidate enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+        <input type="hidden" id="hazard-type" name="hazard_type" value="" required />
+
+        <!-- ============================================================== -->
+        <!-- Step 1: Hazard Category Cards                                  -->
+        <!-- ============================================================== -->
+        <fieldset class="form-section-fieldset" id="section-category">
+          <legend class="section-legend">
+            <span class="legend-badge">Step 1</span>
+            <span class="legend-title">Select Hazard Category</span>
+            <span class="legend-required">* Required</span>
+          </legend>
+          <p class="legend-hint">Choose the issue that most accurately describes the road risk.</p>
+
+          <div class="hazard-cards-grid" role="radiogroup" aria-label="Hazard Type Selection">
+            <!-- Pothole Card -->
+            <div
+              class="hazard-select-card card-pothole"
+              data-type="Pothole"
+              role="radio"
+              aria-checked="false"
+              tabindex="0"
+              aria-label="Pothole"
+            >
+              <div class="hazard-card-glow" aria-hidden="true"></div>
+              <div class="hazard-card-head">
+                <div class="hazard-icon-circle icon-amber">
+                  <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                  </svg>
+                </div>
+                <span class="hazard-risk-tag tag-amber">Tire Damage</span>
+                <span class="hazard-check-indicator" aria-hidden="true">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>
+                </span>
+              </div>
+              <h3 class="hazard-card-title">Pothole</h3>
+              <p class="hazard-card-desc">
+                Crater, sunken cavity, or missing asphalt on the road surface risking suspension or wheel blowouts.
+              </p>
+            </div>
+
+            <!-- Damaged Road Card -->
+            <div
+              class="hazard-select-card card-damaged"
+              data-type="Damaged Road"
+              role="radio"
+              aria-checked="false"
+              tabindex="0"
+              aria-label="Damaged Road"
+            >
+              <div class="hazard-card-glow" aria-hidden="true"></div>
+              <div class="hazard-card-head">
+                <div class="hazard-icon-circle icon-red">
+                  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>
+                  </svg>
+                </div>
+                <span class="hazard-risk-tag tag-red">Structural Risk</span>
+                <span class="hazard-check-indicator" aria-hidden="true">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>
+                </span>
+              </div>
+              <h3 class="hazard-card-title">Damaged Road</h3>
+              <p class="hazard-card-desc">
+                Severe fissures, crumbling tarmac, uneven ridges, or broken road shoulder causing loss of vehicle control.
+              </p>
+            </div>
+
+            <!-- Waterlogging Card -->
+            <div
+              class="hazard-select-card card-waterlogging"
+              data-type="Waterlogging"
+              role="radio"
+              aria-checked="false"
+              tabindex="0"
+              aria-label="Waterlogging"
+            >
+              <div class="hazard-card-glow" aria-hidden="true"></div>
+              <div class="hazard-card-head">
+                <div class="hazard-icon-circle icon-blue">
+                  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>
+                  </svg>
+                </div>
+                <span class="hazard-risk-tag tag-blue">Aquaplaning</span>
+                <span class="hazard-check-indicator" aria-hidden="true">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>
+                </span>
+              </div>
+              <h3 class="hazard-card-title">Waterlogging</h3>
+              <p class="hazard-card-desc">
+                Deep standing water, flooded underpasses, or blocked storm drains hiding submerged potholes from sight.
+              </p>
+            </div>
+
+            <!-- Other Hazard Card -->
+            <div
+              class="hazard-select-card card-other"
+              data-type="Other"
+              role="radio"
+              aria-checked="false"
+              tabindex="0"
+              aria-label="Other Hazard"
+            >
+              <div class="hazard-card-glow" aria-hidden="true"></div>
+              <div class="hazard-card-head">
+                <div class="hazard-icon-circle icon-purple">
+                  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polygon points="12 2 2 22 22 22 12 2"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                  </svg>
+                </div>
+                <span class="hazard-risk-tag tag-purple">Caution</span>
+                <span class="hazard-check-indicator" aria-hidden="true">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>
+                </span>
+              </div>
+              <h3 class="hazard-card-title">Other Hazard</h3>
+              <p class="hazard-card-desc">
+                Open manhole, unlit construction zone, fallen tree debris, loose gravel, or missing guardrails.
+              </p>
+            </div>
+          </div>
+          <p id="hazard-error" class="field-error-text is-hidden" role="alert">Please select one hazard category.</p>
+        </fieldset>
+
+        <!-- ============================================================== -->
+        <!-- Step 2: Description & Photo Evidence                           -->
+        <!-- ============================================================== -->
+        <fieldset class="form-section-fieldset" id="section-details">
+          <legend class="section-legend">
+            <span class="legend-badge">Step 2</span>
+            <span class="legend-title">Hazard Details &amp; Evidence</span>
+          </legend>
+
+          <!-- Description Input -->
+          <div class="form-group-wrap">
+            <div class="label-with-meta">
+              <label for="description" class="form-label">
+                Detailed Description <span class="req-star">*</span>
+              </label>
+              <span id="char-counter" class="char-counter-pill" aria-live="polite">
+                <span id="char-count">0</span> / 1000
+              </span>
+            </div>
+            <textarea
+              id="description"
+              name="description"
+              class="form-textarea-v2"
+              rows="4"
+              minlength="10"
+              maxlength="1000"
+              required
+              placeholder="Provide key details to help commuters: Which lane is affected? Is it visible at night? Approximate size or depth?"
+              aria-describedby="desc-hint desc-status-badge"
+            ></textarea>
+
+            <div class="desc-footer-row">
+              <div id="desc-status-badge" class="desc-status-badge state-neutral">
+                <span class="status-icon" aria-hidden="true">•</span>
+                <span id="desc-status-text">Minimum 10 characters required</span>
+              </div>
+              <p id="desc-hint" class="field-help-text">
+                Be specific: mention landmarks or distance from intersections.
+              </p>
+            </div>
+          </div>
+
+          <!-- Drag-and-Drop Image Uploader -->
+          <div class="form-group-wrap photo-upload-group">
+            <div class="label-with-meta">
+              <span class="form-label">Road Photograph (Optional)</span>
+              <span class="photo-limits-badge">JPG, PNG, WEBP · Max 5 MB</span>
+            </div>
+
+            <!-- Drop Zone Container -->
+            <div id="drop-zone" class="drop-zone-v2" tabindex="0" role="button" aria-label="Upload photo. Click or drag file here">
+              <input
+                type="file"
+                id="photo"
+                name="photo"
+                class="hidden-file-input"
+                accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+              />
+              <div class="drop-zone-content" id="drop-zone-idle">
+                <div class="drop-icon-circle" aria-hidden="true">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+                  </svg>
+                </div>
+                <p class="drop-headline">
+                  Drag &amp; drop road photo here, or <span class="drop-accent-link">browse files</span>
+                </p>
+                <p class="drop-subtext">Clear photos help authorities prioritize emergency repairs faster.</p>
+              </div>
+
+              <!-- Preview State (when file selected) -->
+              <div class="photo-preview-wrap is-hidden" id="photo-preview-wrap">
+                <div class="preview-img-frame">
+                  <img id="photo-preview-img" src="" alt="Selected road hazard photo preview" />
+                </div>
+                <div class="preview-meta">
+                  <div class="preview-filename" id="preview-filename">photo.jpg</div>
+                  <div class="preview-filesize" id="preview-filesize">1.2 MB</div>
+                  <div class="preview-valid-badge">
+                    <span class="badge-dot pulse-live"></span>
+                    <span>Ready to upload</span>
+                  </div>
+                </div>
+                <button type="button" id="remove-photo-btn" class="btn-remove-photo" title="Remove selected photo" aria-label="Remove photo">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  <span>Remove</span>
+                </button>
+              </div>
+            </div>
+            <p id="photo-error" class="field-error-text is-hidden" role="alert"></p>
+          </div>
+        </fieldset>
+
+        <!-- ============================================================== -->
+        <!-- Step 3: Precise Map Pinpoint & GPS Auto-Detection              -->
+        <!-- ============================================================== -->
+        <fieldset class="form-section-fieldset" id="section-location">
+          <legend class="section-legend">
+            <span class="legend-badge">Step 3</span>
+            <span class="legend-title">Pinpoint Exact Location</span>
+            <span class="legend-required">* Required</span>
+          </legend>
+          <p class="legend-hint">
+            Click anywhere on the map or drag the pin directly over the pothole / hazard.
+          </p>
+
+          <!-- Map Action Toolbar -->
+          <div class="map-action-toolbar">
+            <button type="button" id="btn-report-locate" class="btn-locate-auto" title="Detect GPS location">
+              <span class="locate-radar-pulse" aria-hidden="true"></span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+              <span id="locate-btn-text">📍 Auto-detect My Location</span>
+            </button>
+
+            <!-- Location Search within Report Form -->
+            <div class="report-search-wrap">
+              <label for="report-geo-search" class="sr-only">Search location</label>
+              <input
+                type="text"
+                id="report-geo-search"
+                class="report-search-input"
+                placeholder="Search area, road, or city…"
+                autocomplete="off"
+              />
+              <button type="button" id="btn-report-search" class="btn-search-inline" title="Search map location">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <span>Find</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Interactive Light Map Canvas -->
+          <div class="report-map-shell">
+            <div id="report-mini-map" class="report-mini-map-canvas" aria-label="Interactive map for selecting hazard location"></div>
+            <div class="report-map-overlay-badge" id="map-pin-status-badge">
+              <span class="badge-dot pulse-hazard"></span>
+              <span id="pin-status-text">Click anywhere on the map to place hazard pin</span>
+            </div>
+          </div>
+
+          <!-- Coordinate Inputs (Synchronized & Readonly) -->
+          <div class="coord-display-grid">
+            <div class="coord-field">
+              <label for="latitude" class="coord-label">Latitude</label>
+              <div class="coord-input-wrap">
+                <span class="coord-prefix">LAT</span>
+                <input
+                  id="latitude"
+                  name="latitude"
+                  type="text"
+                  class="coord-input"
+                  readonly
+                  required
+                  placeholder="28.613900"
+                />
+              </div>
+            </div>
+            <div class="coord-field">
+              <label for="longitude" class="coord-label">Longitude</label>
+              <div class="coord-input-wrap">
+                <span class="coord-prefix">LNG</span>
+                <input
+                  id="longitude"
+                  name="longitude"
+                  type="text"
+                  class="coord-input"
+                  readonly
+                  required
+                  placeholder="77.209000"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div class="address-preview-pill" id="address-preview-pill">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 0 1 0-5 2.5 2.5 0 0 1 0 5z"/></svg>
+            <span id="resolved-address-text">No location selected yet. Click map or auto-detect GPS.</span>
+          </div>
+        </fieldset>
+
+        <!-- ============================================================== -->
+        <!-- Step 4: Submission & Status Feedback                           -->
+        <!-- ============================================================== -->
+        <div class="form-submit-footer">
+          <!-- Live Form Status / Error Message -->
+          <div id="form-message" class="form-message-banner is-hidden" role="status" aria-live="polite"></div>
+
+          <div class="submit-button-row">
+            <button type="submit" id="submit-report-btn" class="btn btn-primary btn-submit-report">
+              <span class="btn-spinner is-hidden" id="submit-spinner" aria-hidden="true"></span>
+              <span id="submit-btn-text">Submit Hazard Report</span>
+              <svg id="submit-arrow-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            </button>
+
+            <a href="{{ url_for('home') }}" class="btn btn-secondary">
+              Cancel
+            </a>
+          </div>
+
+          <p class="submit-disclaimer">
+            By submitting, you confirm that this hazard report reflects actual road conditions and complies with RoadSense community guidelines.
+          </p>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/report.js') }}"></script>
+{% endblock %}

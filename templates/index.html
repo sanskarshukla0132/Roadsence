@@ -82,22 +82,24 @@
             {% if current_user %}Click or drag the marker to pinpoint a hazard location.{% else %}Click a marker to read its details.{% endif %}
           </p>
         </div>
-        <div class="map-shell" data-reveal>
-          <div class="map-search-row">
+        <div class="map-shell ola-map-shell" data-reveal>
+          <!-- Top Floating Action & Search Bar -->
+          <div class="ola-top-bar">
             <div class="map-search-wrap" role="search" aria-label="Location search">
               <label for="location-search" class="sr-only">Search for a location</label>
-              <svg class="map-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+              <svg class="map-search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
               <input
                 id="location-search"
                 class="map-search-input"
                 type="search"
                 autocomplete="off"
                 spellcheck="false"
-                placeholder="Search city, road, or landmark…"
+                placeholder="Search city, street, or landmark (e.g. Connaught Place)…"
                 aria-autocomplete="list"
                 aria-controls="search-suggestions"
                 aria-expanded="false"
               />
+              <button id="search-clear-btn" class="search-clear-btn is-hidden" type="button" aria-label="Clear search" title="Clear search">✕</button>
               <ul
                 id="search-suggestions"
                 class="search-suggestions"
@@ -106,28 +108,247 @@
                 hidden
               ></ul>
             </div>
-            <button
-              id="geolocate-btn"
-              class="btn-geolocate"
-              type="button"
-              title="Use my current location"
-              aria-label="Use my current location"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="9" opacity=".3"/></svg>
-              <span>My location</span>
-            </button>
+
+            <div class="ola-action-buttons">
+              <button
+                id="geolocate-btn"
+                class="btn-geolocate ola-btn"
+                type="button"
+                title="Locate my position (GPS)"
+                aria-label="Use my current location"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="3" fill="currentColor"/>
+                  <path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
+                  <circle cx="12" cy="12" r="8" stroke-width="1.8" stroke-dasharray="2 2"/>
+                </svg>
+                <span>Locate me</span>
+              </button>
+
+              <button
+                id="route-toggle-btn"
+                class="ola-btn ola-btn-primary"
+                type="button"
+                title="Plan route and scan for road hazards"
+                aria-expanded="false"
+                aria-controls="route-panel"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="6" cy="19" r="3"/>
+                  <path d="M9 19h8.5a4.5 4.5 0 0 0 0-9H7a4 4 0 0 1 0-8h11"/>
+                  <polyline points="15 5 18 2 21 5"/>
+                </svg>
+                <span>Directions</span>
+              </button>
+
+              <button
+                id="nearby-toggle-btn"
+                class="ola-btn"
+                type="button"
+                title="View nearby road hazards list"
+                aria-expanded="false"
+                aria-controls="nearby-panel"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                  <circle cx="12" cy="10" r="3"/>
+                </svg>
+                <span>Nearby</span>
+                <span id="nearby-count-badge" class="ola-badge">0</span>
+              </button>
+
+              <button
+                id="reset-view-btn"
+                class="ola-btn ola-icon-only"
+                type="button"
+                title="Reset map view to all hazards"
+                aria-label="Reset map view"
+              >
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                  <path d="M3 3v5h5"/>
+                </svg>
+              </button>
+
+              <button
+                id="fullscreen-btn"
+                class="ola-btn ola-icon-only"
+                type="button"
+                title="Toggle fullscreen map"
+                aria-label="Toggle fullscreen"
+              >
+                <svg id="fs-enter-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polyline points="15 3 21 3 21 9"/>
+                  <polyline points="9 21 3 21 3 15"/>
+                  <line x1="21" y1="3" x2="14" y2="10"/>
+                  <line x1="3" y1="21" x2="10" y2="14"/>
+                </svg>
+                <svg id="fs-exit-icon" class="is-hidden" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polyline points="4 14 10 14 10 20"/>
+                  <polyline points="20 10 14 10 14 4"/>
+                  <line x1="14" y1="10" x2="21" y2="3"/>
+                  <line x1="3" y1="21" x2="10" y2="14"/>
+                </svg>
+              </button>
+            </div>
           </div>
+
+          <!-- Secondary Filter Chips & Map Layer Toolbar -->
+          <div class="ola-filter-toolbar">
+            <div class="ola-chips-scroll" role="toolbar" aria-label="Hazard category filters">
+              <span class="ola-chips-label">Filters:</span>
+              <button class="ola-chip is-active" data-filter="all" type="button">
+                All <span class="chip-count" id="count-all">0</span>
+              </button>
+              <button class="ola-chip chip-pothole" data-filter="Pothole" type="button">
+                <span class="chip-dot dot-pothole" aria-hidden="true"></span>
+                Potholes <span class="chip-count" id="count-pothole">0</span>
+              </button>
+              <button class="ola-chip chip-damaged" data-filter="Damaged Road" type="button">
+                <span class="chip-dot dot-damaged" aria-hidden="true"></span>
+                Damaged Roads <span class="chip-count" id="count-damaged">0</span>
+              </button>
+              <button class="ola-chip chip-waterlogging" data-filter="Waterlogging" type="button">
+                <span class="chip-dot dot-waterlogging" aria-hidden="true"></span>
+                Waterlogging <span class="chip-count" id="count-waterlogging">0</span>
+              </button>
+              <button class="ola-chip chip-other" data-filter="Other" type="button">
+                <span class="chip-dot dot-other" aria-hidden="true"></span>
+                Other <span class="chip-count" id="count-other">0</span>
+              </button>
+            </div>
+
+            <div class="ola-controls-group">
+              <!-- Status selector -->
+              <div class="ola-select-wrap">
+                <label for="status-filter" class="sr-only">Filter by status</label>
+                <select id="status-filter" class="ola-select" title="Filter by status">
+                  <option value="all">Status: All</option>
+                  <option value="active">Status: Open &amp; Active</option>
+                  <option value="Resolved">Status: Resolved</option>
+                </select>
+              </div>
+
+              <!-- View mode toggle: Pins vs Heatmap vs Both -->
+              <div class="ola-segmented" role="radiogroup" aria-label="Map visual mode">
+                <button class="seg-btn is-active" data-mode="pins" type="button" title="Show colorful hazard markers">Pins</button>
+                <button class="seg-btn" data-mode="heat" type="button" title="Show hazard density heatmap">Heatmap</button>
+                <button class="seg-btn" data-mode="both" type="button" title="Show both pins and heatmap">Both</button>
+              </div>
+
+              <!-- Map Tile Layer Picker -->
+              <div class="ola-select-wrap">
+                <label for="layer-select" class="sr-only">Map Style</label>
+                <select id="layer-select" class="ola-select ola-layer-select" title="Change map tile layer">
+                  <option value="osm" selected>🗺️ OpenStreetMap (Standard)</option>
+                  <option value="osm_hot">☀️ OpenStreetMap (Bright / HOT)</option>
+                  <option value="opentopo">🏔️ OpenTopoMap (Terrain &amp; Roads)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
           <p id="search-status" class="search-status" role="status" aria-live="polite"></p>
           <p id="map-status" class="map-status" role="status">
             Loading reports…
           </p>
-          <div class="map-frame">
-            <div id="hazard-map" class="map-card" aria-label="Interactive road map"></div>
-            <ul class="map-legend" aria-label="Map legend">
-              <li><span class="legend-dot legend-reported"></span>Reported</li>
-              <li><span class="legend-dot legend-progress"></span>In progress</li>
-              <li><span class="legend-dot legend-resolved"></span>Resolved</li>
-            </ul>
+
+          <div class="map-frame ola-map-frame" id="map-frame-container">
+            <div id="hazard-map" class="map-card ola-map-canvas" aria-label="Interactive road map"></div>
+
+            <!-- Route Directions Drawer (OSRM integration) -->
+            <aside id="route-panel" class="ola-drawer ola-route-drawer is-closed" aria-label="Directions and safety scanner" hidden>
+              <div class="drawer-header">
+                <div class="drawer-title-wrap">
+                  <span class="drawer-icon" aria-hidden="true">🧭</span>
+                  <h3>Route Safety Scanner</h3>
+                </div>
+                <button id="close-route-panel" class="drawer-close-btn" type="button" aria-label="Close route panel">✕</button>
+              </div>
+              <div class="drawer-body">
+                <p class="drawer-desc">Find driving directions and automatically scan for potholes &amp; road hazards along your way.</p>
+                
+                <div class="route-input-group">
+                  <div class="route-field">
+                    <span class="point-badge point-start">A</span>
+                    <input id="route-start-input" type="text" placeholder="Start (click map or use GPS)" />
+                    <button id="route-use-gps" class="route-inline-btn" type="button" title="Use current GPS location">📍 GPS</button>
+                  </div>
+                  <div class="route-field">
+                    <span class="point-badge point-end">B</span>
+                    <input id="route-end-input" type="text" placeholder="Destination (click map or hazard)" />
+                    <button id="route-pick-map" class="route-inline-btn" type="button" title="Click anywhere on the map to set destination">🗺️ Pick</button>
+                  </div>
+                </div>
+
+                <div class="route-actions-row">
+                  <button id="calc-route-btn" class="btn btn-primary ola-btn-full" type="button">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                    <span>Calculate Safe Route</span>
+                  </button>
+                  <button id="clear-route-btn" class="ola-btn ola-btn-outline" type="button">Clear</button>
+                </div>
+
+                <div id="route-results" class="route-results is-hidden">
+                  <div class="route-summary-card">
+                    <div class="summary-stat">
+                      <span class="stat-lbl">Distance</span>
+                      <strong id="route-dist">—</strong>
+                    </div>
+                    <div class="summary-divider"></div>
+                    <div class="summary-stat">
+                      <span class="stat-lbl">Est. Time</span>
+                      <strong id="route-time">—</strong>
+                    </div>
+                  </div>
+
+                  <div id="route-hazard-alert" class="route-hazard-alert">
+                    <!-- Dynamic route hazard detection content -->
+                  </div>
+                </div>
+              </div>
+            </aside>
+
+            <!-- Nearby Hazards Drawer -->
+            <aside id="nearby-panel" class="ola-drawer ola-nearby-drawer is-closed" aria-label="Nearby road hazards" hidden>
+              <div class="drawer-header">
+                <div class="drawer-title-wrap">
+                  <span class="drawer-icon" aria-hidden="true">📍</span>
+                  <h3>Nearby Hazards</h3>
+                </div>
+                <button id="close-nearby-panel" class="drawer-close-btn" type="button" aria-label="Close nearby panel">✕</button>
+              </div>
+              <div class="drawer-body">
+                <p id="nearby-subtitle" class="drawer-desc">Hazards ordered by proximity to your current location or map view.</p>
+                <ul id="nearby-hazards-list" class="nearby-list" role="list">
+                  <!-- Populated dynamically -->
+                </ul>
+              </div>
+            </aside>
+
+            <!-- Floating Legend -->
+            <div class="ola-floating-legend" id="ola-legend" aria-label="Map legend">
+              <button id="toggle-legend-btn" class="legend-header" type="button" aria-expanded="true">
+                <span class="legend-title">Map Legend</span>
+                <span class="legend-chevron">▾</span>
+              </button>
+              <div class="legend-content" id="legend-content">
+                <div class="legend-group">
+                  <span class="legend-group-title">Hazards</span>
+                  <div class="legend-item"><span class="legend-swatch swatch-pothole"></span> Pothole</div>
+                  <div class="legend-item"><span class="legend-swatch swatch-damaged"></span> Damaged Road</div>
+                  <div class="legend-item"><span class="legend-swatch swatch-waterlogging"></span> Waterlogging</div>
+                  <div class="legend-item"><span class="legend-swatch swatch-other"></span> Other Hazard</div>
+                </div>
+                <div class="legend-group">
+                  <span class="legend-group-title">Status</span>
+                  <div class="legend-item"><span class="legend-dot legend-reported"></span> Reported (Open)</div>
+                  <div class="legend-item"><span class="legend-dot legend-progress"></span> In progress</div>
+                  <div class="legend-item"><span class="legend-dot legend-resolved"></span> Resolved</div>
+                  <div class="legend-item"><span class="legend-dot legend-dismissed"></span> Dismissed</div>
+                </div>
+              </div>
+            </div>
           </div>
           <p class="map-hint">
             {% if current_user %}
@@ -139,44 +360,143 @@
         </div>
       </section>
 
-      <section class="features" aria-labelledby="features-heading">
+      <!-- Lightbox Modal for Photo Inspection -->
+      <div id="photo-modal" class="photo-modal" aria-hidden="true" role="dialog" aria-label="Hazard Photograph Preview">
+        <div class="photo-modal-backdrop" id="modal-backdrop"></div>
+        <div class="photo-modal-card">
+          <button id="photo-modal-close" class="photo-modal-close" type="button" aria-label="Close photo preview">✕</button>
+          <img id="photo-modal-img" class="photo-modal-img" src="" alt="Hazard photograph full size" />
+          <div class="photo-modal-caption">
+            <h4 id="photo-modal-title">Hazard Photo</h4>
+            <p id="photo-modal-desc"></p>
+          </div>
+        </div>
+      </div>
+
+      <section id="how-it-works" class="features" aria-labelledby="features-heading">
         <div class="section-head" data-reveal>
           <p class="section-kicker">02 — Process</p>
           <h2 id="features-heading">How it works</h2>
-          <p>Three simple steps. Log in to submit your own report.</p>
+          <p>Three simple steps: report a hazard, view it live on the map, and track resolution.</p>
         </div>
+
+        <div class="how-flow-bar" data-reveal aria-hidden="true">
+          <div class="how-flow-step is-active">
+            <span class="flow-step-num">01</span>
+            <span class="flow-step-title"><span class="title-short">Report</span><span class="title-full"> a Hazard</span></span>
+          </div>
+          <div class="how-flow-line">
+            <span class="flow-pulse"></span>
+            <span class="flow-arrow">→</span>
+          </div>
+          <div class="how-flow-step">
+            <span class="flow-step-num">02</span>
+            <span class="flow-step-title"><span class="title-short">View</span><span class="title-full"> on Map</span></span>
+          </div>
+          <div class="how-flow-line">
+            <span class="flow-pulse flow-pulse-2"></span>
+            <span class="flow-arrow">→</span>
+          </div>
+          <div class="how-flow-step">
+            <span class="flow-step-num">03</span>
+            <span class="flow-step-title"><span class="title-short">Track</span><span class="title-full"> Status</span></span>
+          </div>
+        </div>
+
         <div class="feature-grid">
-          <article class="feature-card" data-reveal>
+          <article class="feature-card how-step-card" data-reveal>
             <span class="feature-step">01</span>
             <div class="feature-icon" aria-hidden="true">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22V4M4 4h12l-2 4 2 4H4"/></svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m10.29 3.86-7.81 13.52a2 2 0 0 0 1.71 3h15.62a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             </div>
-            <h3>Report a hazard</h3>
+            <div class="how-stage" aria-hidden="true">
+              <div class="stage-report-scene">
+                <div class="stage-pin-anchor">
+                  <span class="stage-ping-ring"></span>
+                  <span class="stage-ping-ring ring-2"></span>
+                  <div class="stage-pin">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 0 1 0-5 2.5 2.5 0 0 1 0 5z"/>
+                    </svg>
+                  </div>
+                </div>
+                <div class="stage-badge">
+                  <span class="badge-dot pulse-hazard"></span>
+                  <span>Pothole detected</span>
+                </div>
+              </div>
+            </div>
+            <h3>Report a Hazard</h3>
             <p>
-              Choose a type, write a short description, and click the map to
-              set the location. You can attach an optional road photo.
+              Choose a hazard category, describe the danger, and click the map
+              to pinpoint the spot. You can attach an optional road photo.
             </p>
           </article>
-          <article class="feature-card" data-reveal>
+
+          <article class="feature-card how-step-card" data-reveal>
             <span class="feature-step">02</span>
             <div class="feature-icon" aria-hidden="true">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14"/></svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg>
             </div>
-            <h3>See nearby risks</h3>
+            <div class="how-stage" aria-hidden="true">
+              <div class="stage-map-scene">
+                <div class="stage-grid-lines"></div>
+                <div class="stage-radar-sweep"></div>
+                <div class="stage-map-dots">
+                  <span class="map-dot dot-1"></span>
+                  <span class="map-dot dot-2"></span>
+                  <span class="map-dot dot-3"></span>
+                </div>
+                <div class="stage-badge">
+                  <span class="badge-dot pulse-live"></span>
+                  <span>Live on map · 28.6° N</span>
+                </div>
+              </div>
+            </div>
+            <h3>View on Map</h3>
             <p>
-              Saved reports show up as map markers. Click a marker to view
-              the hazard type, description, and status.
+              Saved reports immediately appear on the interactive map.
+              Click any marker to inspect hazard details, notes, and photos.
             </p>
           </article>
-          <article class="feature-card" data-reveal>
+
+          <article class="feature-card how-step-card" data-reveal>
             <span class="feature-step">03</span>
             <div class="feature-icon" aria-hidden="true">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/></svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="m9 12 2 2 4-4"/></svg>
             </div>
-            <h3>Track your reports</h3>
+            <div class="how-stage" aria-hidden="true">
+              <div class="stage-track-scene">
+                <div class="stage-pipeline">
+                  <div class="pipe-node done">
+                    <span class="node-bullet">✓</span>
+                    <span class="node-name">Reported</span>
+                  </div>
+                  <div class="pipe-connector">
+                    <span class="pipe-fill"></span>
+                  </div>
+                  <div class="pipe-node in-progress">
+                    <span class="node-bullet">●</span>
+                    <span class="node-name">Review</span>
+                  </div>
+                  <div class="pipe-connector">
+                    <span class="pipe-fill pipe-fill-delayed"></span>
+                  </div>
+                  <div class="pipe-node resolved">
+                    <span class="node-bullet">✓</span>
+                    <span class="node-name">Resolved</span>
+                  </div>
+                </div>
+                <div class="stage-badge">
+                  <span class="badge-check-icon">✓</span>
+                  <span>Status verified</span>
+                </div>
+              </div>
+            </div>
+            <h3>Track Status</h3>
             <p>
-              Sign in to report hazards and find your submissions on the
-              My Reports page. Administrators review and update statuses.
+              Track your submissions on the My Reports page. Safety
+              administrators review incoming hazards and update status to resolved.
             </p>
           </article>
         </div>
@@ -192,19 +512,29 @@
               height="768"
               loading="lazy"
             />
+            <div class="media-overlay-badge">
+              <span class="badge-dot pulse-live"></span>
+              <span>Interactive 3D WebGL Model Available</span>
+            </div>
           </div>
           <div class="about-body">
-            <p class="section-kicker">03 — About</p>
+            <p class="section-kicker">03 — Mission &amp; Technology</p>
             <h2 id="about-heading">About RoadSense</h2>
             <p>
-              RoadSense is a student project for sharing road safety problems.
-              Phase 3 adds user accounts, report ownership, and an admin
-              dashboard for reviewing reports.
+              RoadSense is an intelligent civic road safety platform that turns community hazard reports into verified geospatial intelligence. We bridge everyday commuters and municipal authorities to eliminate unflagged potholes, damaged roads, and waterlogging.
             </p>
             <p>
-              If you see a hazard on the road today, follow local safety
-              guidance and contact the appropriate authorities as well.
+              Explore our mission, interactive 3D WebGL road hazard simulator, architectural roadmap, and civic safety features on our dedicated About page.
             </p>
+            <div class="about-actions" style="margin-top: 1.5rem; display: flex; gap: 0.75rem; flex-wrap: wrap;">
+              <a class="btn btn-primary" href="{{ url_for('about') }}">
+                Discover Mission &amp; 3D Simulator
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+              </a>
+              <a class="btn btn-secondary" href="{{ url_for('about') }}#simulator">
+                Inspect 3D Model
+              </a>
+            </div>
           </div>
         </div>
       </section>
@@ -216,14 +546,19 @@
             <h2 id="report-heading">Report a Hazard</h2>
             {% if current_user %}
               <p>
-                Click the map above to choose a location, then complete this form.
-                All fields except the photo are required.
+                Select a hazard category, describe the danger, and click the map above to pinpoint the spot.
               </p>
               <ol class="report-steps">
-                <li>Pick a hazard type</li>
-                <li>Describe what drivers should know</li>
-                <li>Drop a pin on the map</li>
+                <li>Choose a hazard category card</li>
+                <li>Add description &amp; optional road photo</li>
+                <li>Drop a pin on the interactive map above</li>
               </ol>
+              <div class="dedicated-report-promo" style="margin-top: 1.5rem;">
+                <a href="{{ url_for('report_page') }}" class="btn btn-secondary btn-small" style="display: inline-flex; align-items: center; gap: 0.5rem;">
+                  <span>Open Fullscreen Report Studio</span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                </a>
+              </div>
             {% else %}
               <p>
                 You must <a href="{{ url_for('login') }}">log in</a> to report a hazard.
@@ -231,21 +566,68 @@
             {% endif %}
           </div>
           {% if current_user %}
-          <form id="report-form" class="report-form" novalidate data-reveal>
+          <form id="report-form" class="report-form report-form-home" novalidate data-reveal enctype="multipart/form-data">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
-            <label>
-              Hazard type
-              <select id="hazard-type" name="hazard_type" required>
-                <option value="">Select a type</option>
-                <option value="Pothole">Pothole</option>
-                <option value="Damaged Road">Damaged Road</option>
-                <option value="Waterlogging">Waterlogging</option>
-                <option value="Other">Other</option>
-              </select>
-            </label>
+            <input type="hidden" id="hazard-type" name="hazard_type" value="" required />
 
-            <label>
-              Description
+            <!-- Hazard Selection Cards -->
+            <div class="form-group-wrap">
+              <label class="form-label">
+                Hazard Type <span class="req-star">*</span>
+              </label>
+              <div class="hazard-cards-grid hazard-cards-compact" role="radiogroup" aria-label="Hazard Type Selection">
+                <div class="hazard-select-card card-pothole" data-type="Pothole" role="radio" aria-checked="false" tabindex="0">
+                  <div class="hazard-card-head">
+                    <div class="hazard-icon-circle icon-amber">
+                      <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+                    </div>
+                    <span class="hazard-risk-tag tag-amber">Tire Damage</span>
+                  </div>
+                  <h4 class="hazard-compact-title">Pothole</h4>
+                </div>
+
+                <div class="hazard-select-card card-damaged" data-type="Damaged Road" role="radio" aria-checked="false" tabindex="0">
+                  <div class="hazard-card-head">
+                    <div class="hazard-icon-circle icon-red">
+                      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+                    </div>
+                    <span class="hazard-risk-tag tag-red">Crack / Rut</span>
+                  </div>
+                  <h4 class="hazard-compact-title">Damaged Road</h4>
+                </div>
+
+                <div class="hazard-select-card card-waterlogging" data-type="Waterlogging" role="radio" aria-checked="false" tabindex="0">
+                  <div class="hazard-card-head">
+                    <div class="hazard-icon-circle icon-blue">
+                      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+                    </div>
+                    <span class="hazard-risk-tag tag-blue">Flooding</span>
+                  </div>
+                  <h4 class="hazard-compact-title">Waterlogging</h4>
+                </div>
+
+                <div class="hazard-select-card card-other" data-type="Other" role="radio" aria-checked="false" tabindex="0">
+                  <div class="hazard-card-head">
+                    <div class="hazard-icon-circle icon-purple">
+                      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="12 2 2 22 22 22 12 2"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    </div>
+                    <span class="hazard-risk-tag tag-purple">Caution</span>
+                  </div>
+                  <h4 class="hazard-compact-title">Other</h4>
+                </div>
+              </div>
+            </div>
+
+            <!-- Description with Live Character Counter -->
+            <div class="form-group-wrap">
+              <div class="label-with-meta">
+                <label for="description" class="form-label">
+                  Description <span class="req-star">*</span>
+                </label>
+                <span id="char-counter" class="char-counter-pill">
+                  <span id="char-count">0</span> / 1000
+                </span>
+              </div>
               <textarea
                 id="description"
                 name="description"
@@ -253,31 +635,32 @@
                 minlength="10"
                 maxlength="1000"
                 required
-                placeholder="What should other people watch out for?"
+                placeholder="What should other drivers and cyclists watch out for? (min 10 chars)"
               ></textarea>
-            </label>
+            </div>
 
+            <!-- Coordinates Row -->
             <div class="coord-row">
               <label>
-                Latitude
+                Latitude <span class="req-star">*</span>
                 <input
                   id="latitude"
                   name="latitude"
                   type="text"
                   readonly
                   required
-                  placeholder="Click or search the map"
+                  placeholder="Click or search the map above"
                 />
               </label>
               <label>
-                Longitude
+                Longitude <span class="req-star">*</span>
                 <input
                   id="longitude"
                   name="longitude"
                   type="text"
                   readonly
                   required
-                  placeholder="Click or search the map"
+                  placeholder="Click or search the map above"
                 />
               </label>
             </div>
@@ -285,25 +668,50 @@
               Search or click the map above to place the hazard pin. You can drag the pin to refine the exact spot.
             </p>
 
-            <label>
-              Road photograph (optional)
-              <input
-                id="photo"
-                name="photo"
-                type="file"
-                accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
-              />
-            </label>
-            <p class="field-hint">JPG, PNG, or WEBP. Maximum 5 MB.</p>
+            <!-- Drag-and-Drop / File Upload with preview -->
+            <div class="form-group-wrap photo-upload-group">
+              <div class="label-with-meta">
+                <span class="form-label">Road photograph (optional)</span>
+                <span class="photo-limits-badge">Max 5 MB</span>
+              </div>
+              <div id="drop-zone" class="drop-zone-v2 drop-zone-compact" tabindex="0">
+                <input
+                  id="photo"
+                  name="photo"
+                  type="file"
+                  class="hidden-file-input"
+                  accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                />
+                <div class="drop-zone-content" id="drop-zone-idle">
+                  <p class="drop-headline">
+                    Drop photo here, or <span class="drop-accent-link">browse</span>
+                  </p>
+                </div>
+                <div class="photo-preview-wrap is-hidden" id="photo-preview-wrap">
+                  <div class="preview-img-frame">
+                    <img id="photo-preview-img" src="" alt="Hazard preview" />
+                  </div>
+                  <div class="preview-meta">
+                    <div class="preview-filename" id="preview-filename">photo.jpg</div>
+                    <div class="preview-filesize" id="preview-filesize">1.2 MB</div>
+                  </div>
+                  <button type="button" id="remove-photo-btn" class="btn-remove-photo" title="Remove photo">✕</button>
+                </div>
+              </div>
+            </div>
 
             <p id="form-message" class="form-message" role="status"></p>
 
-            <button class="btn btn-primary" type="submit">Submit report</button>
+            <button class="btn btn-primary btn-submit-report" type="submit">
+              <span class="btn-spinner is-hidden" id="submit-spinner" aria-hidden="true"></span>
+              <span id="submit-btn-text">Submit report</span>
+            </button>
           </form>
           {% endif %}
         </div>
       </section>
 {% endblock %}
 {% block scripts %}
+    <script src="{{ url_for('static', filename='js/leaflet-heat.js') }}"></script>
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 {% endblock %}

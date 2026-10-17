@@ -1,0 +1,440 @@
+{% extends "base.html" %}
+{% block title %}About RoadSense — Smart Road Safety Initiative & 3D Simulator{% endblock %}
+
+{% block content %}
+<div class="about-page">
+  <!-- ================================================================== -->
+  <!-- Hero Section                                                       -->
+  <!-- ================================================================== -->
+  <section class="about-hero">
+    <div class="about-hero-bg" aria-hidden="true">
+      <div class="hero-grid-lines"></div>
+      <div class="hero-light-glow"></div>
+    </div>
+
+    <div class="about-hero-inner">
+      <div class="about-hero-badge" data-reveal>
+        <span class="badge-dot pulse-live" aria-hidden="true"></span>
+        <span>Smart Road Safety Initiative · Phase 3</span>
+      </div>
+
+      <h1 class="about-hero-title" data-reveal>
+        Engineering safer roads through <span class="text-gradient">real-time community hazard intelligence</span>
+      </h1>
+
+      <p class="about-hero-copy" data-reveal>
+        RoadSense bridges everyday commuters and municipal road authorities. By transforming scattered road defects into verified geospatial intelligence, we empower drivers with proactive route safety warnings while accelerating infrastructure repair.
+      </p>
+
+      <div class="about-stat-strip" data-reveal>
+        <div class="stat-pill">
+          <span class="stat-pill-num">0</span>
+          <span class="stat-pill-label">Hardware Sensor Cost</span>
+        </div>
+        <div class="stat-pill-divider" aria-hidden="true"></div>
+        <div class="stat-pill">
+          <span class="stat-pill-num">350m</span>
+          <span class="stat-pill-label">Route Proximity Scanner</span>
+        </div>
+        <div class="stat-pill-divider" aria-hidden="true"></div>
+        <div class="stat-pill">
+          <span class="stat-pill-num">100%</span>
+          <span class="stat-pill-label">Free Keyless Map Data</span>
+        </div>
+        <div class="stat-pill-divider" aria-hidden="true"></div>
+        <div class="stat-pill">
+          <span class="stat-pill-num">4</span>
+          <span class="stat-pill-label">Tracked Hazard Categories</span>
+        </div>
+      </div>
+
+      <div class="about-hero-actions" data-reveal>
+        <a class="btn btn-primary" href="#simulator">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+          Launch 3D Hazard Simulator
+        </a>
+        <a class="btn btn-secondary" href="{{ url_for('home') }}#explore">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+          Explore Live Map
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================== -->
+  <!-- Interactive 3D Road & Pothole Simulator                            -->
+  <!-- ================================================================== -->
+  <section id="simulator" class="about-section simulator-section" aria-labelledby="simulator-heading">
+    <div class="section-container">
+      <div class="section-head text-center" data-reveal>
+        <p class="section-kicker">Interactive WebGL Experience</p>
+        <h2 id="simulator-heading">3D Road Degradation &amp; Hazard Inspector</h2>
+        <p>
+          Interact with a real-time 3D simulation of an asphalt roadway defect. Drag with your mouse or finger to rotate, toggle inspection lighting, and simulate pothole severity levels.
+        </p>
+      </div>
+
+      <div class="simulator-wrapper" data-reveal>
+        <!-- 3D Canvas Viewport -->
+        <div class="simulator-viewport" id="canvas-container" role="region" aria-label="Interactive 3D Road Defect Model">
+          <canvas id="about-3d-canvas" class="webgl-canvas"></canvas>
+
+          <!-- Floating Simulator Controls Bar -->
+          <div class="sim-overlay-controls" aria-label="3D Simulator Controls">
+            <div class="sim-control-group">
+              <span class="sim-control-label">View Preset:</span>
+              <div class="sim-btn-group">
+                <button type="button" class="sim-btn is-active" id="cam-perspective" title="Isometric angle view">3D Angle</button>
+                <button type="button" class="sim-btn" id="cam-top" title="Direct overhead view">Top-Down</button>
+                <button type="button" class="sim-btn" id="cam-driver" title="Driver road perspective">Driver View</button>
+              </div>
+            </div>
+
+            <div class="sim-control-group">
+              <span class="sim-control-label">Crater Severity:</span>
+              <div class="sim-btn-group">
+                <button type="button" class="sim-btn is-active" data-severity="1" id="sev-mild">Minor Pit</button>
+                <button type="button" class="sim-btn" data-severity="2" id="sev-deep">Deep Crater</button>
+                <button type="button" class="sim-btn" data-severity="3" id="sev-severe">Severe Trench</button>
+              </div>
+            </div>
+
+            <div class="sim-control-group">
+              <button type="button" class="sim-btn sim-btn-toggle" id="toggle-light-mode">
+                <span id="light-mode-icon">🌙</span>
+                <span id="light-mode-text">Night Inspection</span>
+              </button>
+              <button type="button" class="sim-btn sim-btn-icon" id="reset-cam-btn" title="Reset Camera View">⟲ Reset</button>
+            </div>
+          </div>
+
+          <!-- Hotspot Overlay Chips -->
+          <div class="sim-hotspots" aria-hidden="true">
+            <div class="sim-hotspot" id="hotspot-crater" style="top: 48%; left: 45%;">
+              <span class="hotspot-dot"></span>
+              <div class="hotspot-tooltip">
+                <strong>Crater Core</strong>
+                <span>Depth: ~85mm · High suspension shock hazard</span>
+              </div>
+            </div>
+            <div class="sim-hotspot" id="hotspot-cone" style="top: 36%; left: 62%;">
+              <span class="hotspot-dot hotspot-dot-warning"></span>
+              <div class="hotspot-tooltip">
+                <strong>Safety Perimeter</strong>
+                <span>Reflective traffic cone beacon · Night visual guide</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Interaction Hint -->
+          <div class="sim-hint">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/></svg>
+            <span>Click &amp; drag to orbit · Scroll to zoom</span>
+          </div>
+
+          <!-- WebGL Fallback (for older browsers or disabled WebGL) -->
+          <div id="sim-fallback" class="sim-fallback is-hidden">
+            <img src="{{ url_for('static', filename='img/road-safety-3d.png') }}" alt="3D Road Defect Rendering" loading="lazy" />
+            <p>Interactive 3D simulation rendered using WebGL.</p>
+          </div>
+        </div>
+
+        <!-- Simulator Information Sidebar -->
+        <div class="simulator-sidebar">
+          <div class="sim-metric-card">
+            <div class="metric-head">
+              <span class="metric-icon" aria-hidden="true">🕳️</span>
+              <h4>Pothole Dynamics</h4>
+            </div>
+            <p>
+              Potholes develop when sub-surface moisture freezes or softens the road base, followed by hydraulic pressure from vehicle tires fracturing the asphalt crust.
+            </p>
+            <div class="metric-specs">
+              <div class="spec-row">
+                <span class="spec-name">Critical Velocity:</span>
+                <span class="spec-val">&gt; 35 km/h</span>
+              </div>
+              <div class="spec-row">
+                <span class="spec-name">Rim Damage Threshold:</span>
+                <span class="spec-val">50 mm depth</span>
+              </div>
+              <div class="spec-row">
+                <span class="spec-name">Two-Wheeler Spill Risk:</span>
+                <span class="spec-val spec-danger">Extreme</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="sim-metric-card">
+            <div class="metric-head">
+              <span class="metric-icon" aria-hidden="true">🛡️</span>
+              <h4>The RoadSense Response</h4>
+            </div>
+            <p>
+              When reported on RoadSense, this defect immediately alerts approaching drivers on their route and generates a GPS ticket for municipal maintenance teams.
+            </p>
+            <a href="{{ url_for('home') }}#report" class="btn btn-primary sim-sidebar-cta">Report an active road hazard</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================== -->
+  <!-- The Road Crisis & Project Purpose                                  -->
+  <!-- ================================================================== -->
+  <section id="purpose" class="about-section purpose-section" aria-labelledby="purpose-heading">
+    <div class="section-container">
+      <div class="section-head" data-reveal>
+        <p class="section-kicker">01 — The Challenge</p>
+        <h2 id="purpose-heading">Why RoadSense Exists</h2>
+        <p>
+          Unmaintained road defects are more than minor inconveniences—they are critical public safety hazards that claim lives and cost billions annually.
+        </p>
+      </div>
+
+      <div class="purpose-grid">
+        <article class="purpose-card card-warning" data-reveal>
+          <div class="purpose-stat-header">
+            <span class="purpose-big-stat">150K+</span>
+            <span class="purpose-stat-tag">Annual Lives Lost</span>
+          </div>
+          <h3>The Silent Safety Crisis</h3>
+          <p>
+            Road accidents claim over 150,000 lives annually in India alone. Unmarked craters, abrupt road deterioration, and unlit monsoon waterlogging account for thousands of preventable tragedies, especially among two-wheeler riders.
+          </p>
+        </article>
+
+        <article class="purpose-card card-info" data-reveal>
+          <div class="purpose-stat-header">
+            <span class="purpose-big-stat">₹12,000Cr</span>
+            <span class="purpose-stat-tag">Vehicle Damage</span>
+          </div>
+          <h3>Economic &amp; Commuter Burden</h3>
+          <p>
+            Cracked rims, blown suspension struts, bent axles, and collision swerves cost commuters and transport operators immense sums each year while compounding urban traffic jams.
+          </p>
+        </article>
+
+        <article class="purpose-card card-success" data-reveal>
+          <div class="purpose-stat-header">
+            <span class="purpose-big-stat">&lt; 30 sec</span>
+            <span class="purpose-stat-tag">Report Time</span>
+          </div>
+          <h3>Bridging the Civic Action Gap</h3>
+          <p>
+            Traditional municipal complaint hotlines are fragmented and slow. RoadSense equips every citizen with a rapid 30-second map pinpointing tool that immediately warns other drivers while documenting defects publicly.
+          </p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================== -->
+  <!-- Key Features Grid                                                  -->
+  <!-- ================================================================== -->
+  <section id="features" class="about-section features-section" aria-labelledby="key-features-heading">
+    <div class="section-container">
+      <div class="section-head text-center" data-reveal>
+        <p class="section-kicker">02 — Platform Capabilities</p>
+        <h2 id="key-features-heading">Engineered for Accuracy &amp; Speed</h2>
+        <p>
+          RoadSense combines modern geospatial web standards with community-powered accountability.
+        </p>
+      </div>
+
+      <div class="about-feature-grid">
+        <article class="about-feature-card" data-reveal>
+          <div class="about-feat-icon feat-icon-amber" aria-hidden="true">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+          </div>
+          <h3>Light Ola/Uber Interactive Map</h3>
+          <p>
+            Crisp, light map tiles powered by OpenStreetMap with high-contrast road networks, street names, and landmark visibility.
+          </p>
+        </article>
+
+        <article class="about-feature-card" data-reveal>
+          <div class="about-feat-icon feat-icon-blue" aria-hidden="true">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          </div>
+          <h3>GPS Pinpoint &amp; Drag Refinement</h3>
+          <p>
+            Locate hazards with 1-click browser GPS positioning or search any address with instant reverse geocoding suggestions.
+          </p>
+        </article>
+
+        <article class="about-feature-card" data-reveal>
+          <div class="about-feat-icon feat-icon-cyan" aria-hidden="true">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          </div>
+          <h3>Safe Route Proximity Scanner</h3>
+          <p>
+            Integrated free OSRM navigation calculating driving directions while automatically scanning for road hazards within 350 meters of your route.
+          </p>
+        </article>
+
+        <article class="about-feature-card" data-reveal>
+          <div class="about-feat-icon feat-icon-purple" aria-hidden="true">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+          </div>
+          <h3>Hazard Density Heatmaps</h3>
+          <p>
+            Toggle safety heatmaps to identify high-density accident blackspots, severe cluster zones, and chronic waterlogging corridors.
+          </p>
+        </article>
+
+        <article class="about-feature-card" data-reveal>
+          <div class="about-feat-icon feat-icon-emerald" aria-hidden="true">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          </div>
+          <h3>Photographic Evidence Lightbox</h3>
+          <p>
+            Upload clear road defect photos with tamper-safe server-side image validation and full-screen lightbox inspection.
+          </p>
+        </article>
+
+        <article class="about-feature-card" data-reveal>
+          <div class="about-feat-icon feat-icon-rose" aria-hidden="true">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </div>
+          <h3>Admin Triage &amp; Status Tracking</h3>
+          <p>
+            Municipal administrators inspect submissions, update status through <em>Reported &rarr; In Progress &rarr; Resolved</em>, and keep communities informed.
+          </p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================== -->
+  <!-- How It Works (Visual 4-Stage Flow)                                 -->
+  <!-- ================================================================== -->
+  <section id="workflow" class="about-section workflow-section" aria-labelledby="workflow-heading">
+    <div class="section-container">
+      <div class="section-head text-center" data-reveal>
+        <p class="section-kicker">03 — End-to-End Workflow</p>
+        <h2 id="workflow-heading">How RoadSense Protects Drivers</h2>
+        <p>A closed-loop civic safety lifecycle from initial detection to verified repair.</p>
+      </div>
+
+      <div class="workflow-timeline" data-reveal>
+        <div class="wf-step">
+          <div class="wf-badge">01</div>
+          <div class="wf-content">
+            <h4>Spot &amp; Pinpoint</h4>
+            <p>A commuter encounters a road hazard, opens RoadSense, and drops a pin on the high-visibility light map.</p>
+          </div>
+        </div>
+
+        <div class="wf-connector" aria-hidden="true">
+          <span class="wf-pulse"></span>
+        </div>
+
+        <div class="wf-step">
+          <div class="wf-badge">02</div>
+          <div class="wf-content">
+            <h4>Document &amp; Upload</h4>
+            <p>Attach an optional road photograph, select the defect type (Pothole, Damaged Road, Waterlogging), and describe the hazard.</p>
+          </div>
+        </div>
+
+        <div class="wf-connector" aria-hidden="true">
+          <span class="wf-pulse"></span>
+        </div>
+
+        <div class="wf-step">
+          <div class="wf-badge">03</div>
+          <div class="wf-content">
+            <h4>Live Broadcast</h4>
+            <p>The report goes live instantly across the map, warning thousands of nearby commuters and route navigation users.</p>
+          </div>
+        </div>
+
+        <div class="wf-connector" aria-hidden="true">
+          <span class="wf-pulse"></span>
+        </div>
+
+        <div class="wf-step">
+          <div class="wf-badge">04</div>
+          <div class="wf-content">
+            <h4>Civic Resolution</h4>
+            <p>Safety administrators verify repairs and mark the report Resolved, updating public safety metrics.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================== -->
+  <!-- Future Scope & Roadmap                                             -->
+  <!-- ================================================================== -->
+  <section id="roadmap" class="about-section roadmap-section" aria-labelledby="roadmap-heading">
+    <div class="section-container">
+      <div class="section-head" data-reveal>
+        <p class="section-kicker">04 — Innovation Horizon</p>
+        <h2 id="roadmap-heading">The Future Scope of RoadSense</h2>
+        <p>RoadSense is designed to scale from a community reporting web portal into an intelligent, autonomous road infrastructure monitor.</p>
+      </div>
+
+      <div class="roadmap-grid">
+        <div class="roadmap-item" data-reveal>
+          <div class="roadmap-phase-badge">Phase 4</div>
+          <h3>Edge AI Dashcam Detection</h3>
+          <p>
+            Utilizing lightweight computer vision models (TensorFlow.js / ONNX) to automatically classify potholes from windshield phone mounts without manual driver distraction.
+          </p>
+        </div>
+
+        <div class="roadmap-item" data-reveal>
+          <div class="roadmap-phase-badge">Phase 5</div>
+          <h3>Smart Municipal API Dispatch</h3>
+          <p>
+            Direct integrations with municipal grievance redressal portals (e.g. CPGRAMS, Swachhata, Smart City command centers) to auto-dispatch repair work orders.
+          </p>
+        </div>
+
+        <div class="roadmap-item" data-reveal>
+          <div class="roadmap-phase-badge">Phase 6</div>
+          <h3>In-Cabin Audio Safety Alerts</h3>
+          <p>
+            Real-time turn-by-turn voice alerts via Apple CarPlay and Android Auto: <em>"Caution: severe crater reported 200m ahead in right lane."</em>
+          </p>
+        </div>
+
+        <div class="roadmap-item" data-reveal>
+          <div class="roadmap-phase-badge">Phase 7</div>
+          <h3>Monsoon Waterlogging Forecaster</h3>
+          <p>
+            Correlating historical flood reports with open meteorological precipitation forecasts to alert commuters before underpasses become impassable.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================== -->
+  <!-- Call To Action Banner                                              -->
+  <!-- ================================================================== -->
+  <section class="about-cta-section" data-reveal>
+    <div class="about-cta-card">
+      <div class="cta-sparkle" aria-hidden="true"></div>
+      <h2>Every report makes the road safer for someone behind you.</h2>
+      <p>Join our mission to eliminate unflagged road hazards and build safer transit for everyone.</p>
+      <div class="cta-buttons">
+        <a class="btn btn-primary btn-lg" href="{{ url_for('home') }}#explore">Explore Live Map</a>
+        {% if current_user %}
+          <a class="btn btn-secondary btn-lg" href="{{ url_for('home') }}#report">Report a Hazard</a>
+        {% else %}
+          <a class="btn btn-secondary btn-lg" href="{{ url_for('register') }}">Create an Account</a>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/three.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/about.js') }}"></script>
+{% endblock %}

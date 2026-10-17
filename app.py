@@ -4,8 +4,12 @@ Flask app with user authentication, report ownership, and an admin dashboard.
 Hazard reports are stored in SQLite and shown on an interactive Leaflet map.
 """
 
+import json
 import os
 import secrets
+import time
+import urllib.parse
+import urllib.request
 from functools import wraps
 from pathlib import Path
 from uuid import uuid4
@@ -140,6 +144,18 @@ def create_app(test_config=None):
         """Show the RoadSense landing page."""
         return render_template("index.html")
 
+    @app.route("/about")
+    def about():
+        """Show the dedicated RoadSense About page."""
+        return render_template("about.html")
+
+    @app.route("/report")
+    def report_page():
+        """Show the dedicated Report Submission page."""
+        if current_user() is None:
+            return redirect(url_for("login", next=request.path))
+        return render_template("report.html")
+
     @app.route("/api/reports", methods=["GET"])
     def get_reports():
         """Return saved reports as JSON for the public map."""
@@ -176,6 +192,25 @@ def create_app(test_config=None):
             user_id=current_user()["id"],
         )
         return jsonify({"report": _public_report(row)}), 201
+
+    @app.route("/api/geocode", methods=["GET"])
+    def geocode_location():
+        """Search places via Photon/OSM and match local database hazards."""
+        query = (request.args.get("q") or "").strip()
+        if not query or len(query) < 2:
+            return jsonify({"results": []})
+        results = _search_geocoding(query, app.config["DATABASE"])
+        return jsonify({"results": results})
+
+    @app.route("/api/reverse-geocode", methods=["GET"])
+    def reverse_geocode_location():
+        """Reverse geocode coordinates into a human-readable address."""
+        lat = request.args.get("lat")
+        lon = request.args.get("lon")
+        if not lat or not lon:
+            return jsonify({"display_name": ""}), 400
+        display_name = _reverse_geocoding(lat, lon)
+        return jsonify({"display_name": display_name})
 
     @app.route("/uploads/<path:filename>")
     def uploaded_file(filename):
@@ -392,6 +427,163 @@ def _has_allowed_signature(extension, header):
     if extension == ".webp":
         return header.startswith(b"RIFF") and header[8:12] == b"WEBP"
     return any(header.startswith(signature) for signature in signatures)
+
+
+_GEOCODE_CACHE = {}
+_CACHE_MAX_SIZE = 256
+_CACHE_TTL_SECS = 3600  # 1 hour in-memory cache
+
+
+def _search_geocoding(query, db_path):
+    """
+    Search places and reports for query.
+    1. Check in-memory cache.
+    2. Search local database reports matching the query.
+    3. Query Photon OSM geocoding service (free, reliable, no API key).
+    """
+    query_clean = query.strip()
+    cache_key = query_clean.lower()
+    now = time.time()
+
+    if cache_key in _GEOCODE_CACHE:
+        entry = _GEOCODE_CACHE[cache_key]
+        if now - entry["timestamp"] < _CACHE_TTL_SECS:
+            return entry["results"]
+
+    results = []
+
+    # 1. Match local hazard reports by description or hazard type
+    try:
+        with get_connection(db_path) as conn:
+            cursor = conn.execute(
+                """
+                SELECT id, hazard_type, description, latitude, longitude, status
+                FROM reports
+                WHERE hazard_type LIKE ? OR description LIKE ?
+                ORDER BY created_at DESC
+                LIMIT 4
+                """,
+                (f"%{query_clean}%", f"%{query_clean}%"),
+            )
+            for row in cursor.fetchall():
+                desc_snippet = (row["description"] or "").strip()
+                if len(desc_snippet) > 60:
+                    desc_snippet = desc_snippet[:57] + "…"
+                results.append({
+                    "display_name": f"{row['hazard_type']}: {desc_snippet}",
+                    "lat": row["latitude"],
+                    "lon": row["longitude"],
+                    "type": "hazard",
+                    "hazard_id": row["id"],
+                    "hazard_type": row["hazard_type"],
+                    "status": row["status"],
+                })
+    except Exception:
+        pass
+
+    # 2. Query Photon geocoding service (OpenStreetMap data)
+    try:
+        url = f"https://photon.komoot.io/api/?q={urllib.parse.quote(query_clean)}&limit=6"
+        req = urllib.request.Request(
+            url,
+            headers={"User-Agent": "RoadSense/1.0 (road-safety educational project)"},
+        )
+        with urllib.request.urlopen(req, timeout=4) as resp:
+            if resp.status == 200:
+                data = json.loads(resp.read().decode("utf-8"))
+                for feat in data.get("features", []):
+                    coords = feat.get("geometry", {}).get("coordinates", [0, 0])
+                    props = feat.get("properties", {})
+                    name_parts = [
+                        props.get("name"),
+                        props.get("street"),
+                        props.get("district"),
+                        props.get("city"),
+                        props.get("state"),
+                        props.get("country"),
+                    ]
+                    seen = set()
+                    clean_parts = []
+                    for part in name_parts:
+                        if part and part.lower() not in seen:
+                            seen.add(part.lower())
+                            clean_parts.append(part)
+                    full_name = ", ".join(clean_parts)
+                    if full_name:
+                        item = {
+                            "display_name": full_name,
+                            "lat": str(coords[1]),
+                            "lon": str(coords[0]),
+                            "type": "place",
+                        }
+                        if "extent" in props and len(props["extent"]) == 4:
+                            ext = props["extent"]
+                            item["boundingbox"] = [str(ext[3]), str(ext[1]), str(ext[0]), str(ext[2])]
+                        results.append(item)
+    except Exception:
+        # Fallback to Nominatim if Photon has network issues
+        try:
+            params = urllib.parse.urlencode({"q": query_clean, "format": "json", "limit": "5"})
+            req = urllib.request.Request(
+                f"https://nominatim.openstreetmap.org/search?{params}",
+                headers={"User-Agent": "RoadSense/1.0 (road-safety educational project)"},
+            )
+            with urllib.request.urlopen(req, timeout=4) as resp:
+                if resp.status == 200:
+                    data = json.loads(resp.read().decode("utf-8"))
+                    for row in data:
+                        results.append({
+                            "display_name": row.get("display_name"),
+                            "lat": str(row.get("lat")),
+                            "lon": str(row.get("lon")),
+                            "type": "place",
+                            "boundingbox": row.get("boundingbox"),
+                        })
+        except Exception:
+            pass
+
+    if len(_GEOCODE_CACHE) >= _CACHE_MAX_SIZE:
+        _GEOCODE_CACHE.pop(next(iter(_GEOCODE_CACHE)))
+    _GEOCODE_CACHE[cache_key] = {"results": results, "timestamp": now}
+    return results
+
+
+def _reverse_geocoding(lat, lon):
+    try:
+        url = f"https://photon.komoot.io/reverse?lat={lat}&lon={lon}"
+        req = urllib.request.Request(
+            url,
+            headers={"User-Agent": "RoadSense/1.0 (road-safety educational project)"},
+        )
+        with urllib.request.urlopen(req, timeout=4) as resp:
+            if resp.status == 200:
+                data = json.loads(resp.read().decode("utf-8"))
+                features = data.get("features", [])
+                if features:
+                    props = features[0].get("properties", {})
+                    name_parts = [
+                        props.get("name"),
+                        props.get("street"),
+                        props.get("district"),
+                        props.get("city"),
+                        props.get("state"),
+                        props.get("country"),
+                    ]
+                    seen = set()
+                    clean_parts = []
+                    for part in name_parts:
+                        if part and part.lower() not in seen:
+                            seen.add(part.lower())
+                            clean_parts.append(part)
+                    full_name = ", ".join(clean_parts)
+                    if full_name:
+                        return full_name
+    except Exception:
+        pass
+    try:
+        return f"{float(lat):.4f}, {float(lon):.4f}"
+    except (TypeError, ValueError):
+        return f"{lat}, {lon}"
 
 
 app = create_app()

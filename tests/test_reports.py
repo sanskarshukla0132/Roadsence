@@ -52,6 +52,18 @@ def test_home_page_loads(client):
     assert b"Report a Hazard" in response.data
 
 
+def test_theme_switcher_rendered_in_base_template(client):
+    test_client, _upload_folder = client
+    response = test_client.get("/")
+    assert response.status_code == 200
+    assert b'id="theme-toggle"' in response.data
+    assert b'theme-toggle-btn' in response.data
+    assert b'theme-icon-sun' in response.data
+    assert b'theme-icon-moon' in response.data
+    assert b'roadsense-theme' in response.data
+
+
+
 def test_reports_start_empty(client):
     test_client, _upload_folder = client
     response = test_client.get("/api/reports")
@@ -200,4 +212,158 @@ def test_preserves_exact_coordinates(client):
     assert len(matching) == 1
     assert matching[0]["latitude"] == lat
     assert matching[0]["longitude"] == lng
+
+
+def test_ola_uber_map_elements_present(client):
+    test_client, _upload_folder = client
+    response = test_client.get("/")
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    assert "ola-map-shell" in html
+    assert "hazard-map" in html
+    assert "route-panel" in html
+    assert "nearby-panel" in html
+    assert "ola-floating-legend" in html
+    assert "photo-modal" in html
+    assert "leaflet-heat.js" in html
+
+
+def test_osm_keyless_tiles_configured(client):
+    test_client, _upload_folder = client
+    response = test_client.get("/static/js/script.js")
+    assert response.status_code == 200
+    js_code = response.get_data(as_text=True)
+    assert "tile.openstreetmap.org" in js_code
+    assert "OpenStreetMap" in js_code
+    assert "switchTileLayer(\"osm\")" in js_code
+    assert "cartocdn" not in js_code
+
+
+def test_about_page_loads(client):
+    test_client, _upload_folder = client
+    response = test_client.get("/about")
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    assert "about-3d-canvas" in html
+    assert "three.min.js" in html
+    assert "about.js" in html
+    assert "Why RoadSense Exists" in html
+    assert "Pothole Dynamics" in html
+    assert "The Future Scope of RoadSense" in html
+
+
+def test_report_page_redirects_unauthenticated(client):
+    test_client, _upload_folder = client
+    response = test_client.get("/report")
+    assert response.status_code == 302
+    assert "/login?next=" in response.headers.get("Location", "")
+    assert "report" in response.headers.get("Location", "")
+
+
+def test_report_page_loads_for_authenticated_user(client):
+    test_client, _upload_folder = client
+    _login(test_client, username="reporter1", password="password123")
+    response = test_client.get("/report")
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    # Check Header & Stepper
+    assert "Report a Road Hazard" in html
+    assert "stepper-shell" in html
+    assert "step-node-1" in html
+    # Check Hazard Selection Cards
+    assert "hazard-cards-grid" in html
+    assert "card-pothole" in html
+    assert "card-damaged" in html
+    assert "card-waterlogging" in html
+    assert "card-other" in html
+    # Check Character Counter & Description
+    assert "char-counter" in html
+    assert "desc-status-badge" in html
+    # Check Drag-and-Drop Uploader
+    assert "drop-zone" in html
+    assert "photo-preview-wrap" in html
+    assert "remove-photo-btn" in html
+    # Check Location & Light Map
+    assert "btn-report-locate" in html
+    assert "report-mini-map" in html
+    assert "report-geo-search" in html
+    # Check Script & Success Panel
+    assert "report.js" in html
+    assert "report-success-view" in html
+
+
+def test_report_js_file_available(client):
+    test_client, _upload_folder = client
+    response = test_client.get("/static/js/report.js")
+    assert response.status_code == 200
+    code = response.get_data(as_text=True)
+    assert "tile.openstreetmap.org" in code
+    assert "initMiniMap" in code
+    assert "autoDetectLocation" in code
+    assert "selectHazardCard" in code
+    assert "handleDescriptionInput" in code
+
+
+def test_home_page_report_elements_upgraded(client):
+    test_client, _upload_folder = client
+    _login(test_client, username="home_reporter", password="password123")
+    response = test_client.get("/")
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    assert "hazard-cards-compact" in html
+    assert "card-pothole" in html
+    assert "card-damaged" in html
+    assert "card-waterlogging" in html
+    assert "char-counter" in html
+    assert "drop-zone" in html
+
+
+def test_geocode_empty_query(client):
+    test_client, _upload_folder = client
+    res = test_client.get("/api/geocode?q=")
+    assert res.status_code == 200
+    assert res.get_json() == {"results": []}
+
+    res_short = test_client.get("/api/geocode?q=a")
+    assert res_short.status_code == 200
+    assert res_short.get_json() == {"results": []}
+
+
+def test_geocode_local_hazard_matching(client):
+    test_client, _upload_folder = client
+    token = _login(test_client, username="geotester", password="password123")
+    create_res = test_client.post(
+        "/api/reports",
+        data={
+            "csrf_token": token,
+            "hazard_type": "Pothole",
+            "description": "Deep asphalt trench near central metro station",
+            "latitude": "28.613900",
+            "longitude": "77.209000",
+        },
+    )
+    assert create_res.status_code == 201
+
+    search_res = test_client.get("/api/geocode?q=metro")
+    assert search_res.status_code == 200
+    data = search_res.get_json()
+    assert "results" in data
+    assert any(r.get("type") == "hazard" and "metro" in r.get("display_name", "").lower() for r in data["results"])
+
+
+def test_reverse_geocode_endpoint(client):
+    test_client, _upload_folder = client
+    res = test_client.get("/api/reverse-geocode?lat=28.6139&lon=77.2090")
+    assert res.status_code == 200
+    data = res.get_json()
+    assert "display_name" in data
+    assert len(data["display_name"]) > 0
+
+    res_missing = test_client.get("/api/reverse-geocode")
+    assert res_missing.status_code == 400
+
+
+
+
+
 
